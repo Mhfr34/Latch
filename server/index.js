@@ -140,7 +140,7 @@ const startServerAndWhatsApp = async () => {
                   driver.nextSubscriptionDate
                 );
                 const twoAndHalfHoursFromNow = new Date(
-                  currentTime.getTime() + 2.5 * 60 * 60 * 1000
+                  currentTime.getTime() + 19.5 * 60 * 60 * 1000
                 );
                 if (
                   nextSubscriptionDate <= twoAndHalfHoursFromNow &&
@@ -195,7 +195,7 @@ const startServerAndWhatsApp = async () => {
     console.log(`Client state changed: ${state}`);
     if (state === "CONNECTED") {
       await checkAndSendReminders();
-      const CHECK_INTERVAL = 60 * 60 * 1000;
+      const CHECK_INTERVAL = 1 * 60 * 1000;
       setInterval(checkAndSendReminders, CHECK_INTERVAL);
       console.log(`Started continuous checking every hour`);
     }
