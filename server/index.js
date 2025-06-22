@@ -2,13 +2,13 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const connectDB = require("./config/db");
-const mongoose = require("mongoose"); // Import mongoose instance
+const mongoose = require("mongoose");
 const router = require("./routes");
 
 // WhatsApp dependencies
 const { Client, RemoteAuth } = require("whatsapp-web.js");
 const { MongoStore } = require("wwebjs-mongo");
-const qrcode = require("qrcode-terminal");
+const QRCode = require("qrcode");
 const driverModel = require("./models/driverModel");
 
 const app = express();
@@ -46,10 +46,17 @@ app.use((req, res, next) => {
   next();
 });
 
-// Use your main API router under "/api"
 app.use("/api", router);
 
+// Root and favicon endpoints to avoid 404s in logs
+app.get("/", (req, res) => {
+  res.send("API Server is running.");
+});
+app.get("/favicon.ico", (req, res) => res.status(204).end());
+
 const PORT = process.env.PORT || 8080;
+
+let latestQrString = null; // Store the latest QR string for frontend
 
 const startServerAndWhatsApp = async () => {
   // Connect to database
@@ -61,8 +68,8 @@ const startServerAndWhatsApp = async () => {
     console.log(`Server is running on port ${PORT}`);
   });
 
-  // Fix: Pass mongoose instance to MongoStore
-  const store = new MongoStore({ mongoose }); // Pass mongoose instance
+  // Pass mongoose instance to MongoStore
+  const store = new MongoStore({ mongoose });
 
   // WhatsApp client configuration with RemoteAuth
   const client = new Client({
@@ -76,9 +83,22 @@ const startServerAndWhatsApp = async () => {
     },
   });
 
-  // QR code generation
+  // Store QR when generated for serving to frontend
   client.on("qr", (qr) => {
-    qrcode.generate(qr, { small: true });
+    latestQrString = qr;
+  });
+
+  // Serve QR code as a base64 image for the frontend
+  app.get("/api/whatsapp-qr", async (req, res) => {
+    if (!latestQrString) {
+      return res.status(404).json({ error: "QR code not generated yet" });
+    }
+    try {
+      const qrImageUrl = await QRCode.toDataURL(latestQrString);
+      res.json({ qrImageUrl });
+    } catch (e) {
+      res.status(500).json({ error: "Failed to generate QR image" });
+    }
   });
 
   // Function to check and send subscription reminders

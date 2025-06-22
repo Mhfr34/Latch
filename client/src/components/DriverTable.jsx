@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { AiOutlineClose } from "react-icons/ai"; // Importing the close icon
-import { FaTrash } from "react-icons/fa"; // Importing the trash icon for delete
+import { AiOutlineClose } from "react-icons/ai";
+import { FaTrash } from "react-icons/fa";
 import Navbar from "./Navbar";
-import { confirmAlert } from "react-confirm-alert"; // Importing react-confirm-alert
-import "react-confirm-alert/src/react-confirm-alert.css"; // Importing styles
+import { confirmAlert } from "react-confirm-alert";
+import "react-confirm-alert/src/react-confirm-alert.css";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8080/api";
 
@@ -12,9 +12,11 @@ function DriverTable() {
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  // State for Add/Update Driver Modal/Form
   const [showModal, setShowModal] = useState(false);
+  const [showQr, setShowQr] = useState(false);
+  const [qrImageUrl, setQrImageUrl] = useState(null);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [form, setForm] = useState({
     name: "",
@@ -23,7 +25,6 @@ function DriverTable() {
     nextSubscriptionDate: "",
   });
   const [formError, setFormError] = useState(null);
-  const [formLoading, setFormLoading] = useState(false);
 
   // Fetch all drivers
   const fetchDrivers = async () => {
@@ -114,14 +115,14 @@ function DriverTable() {
   };
 
   const handleAddNewDriver = () => {
-    setSelectedDriver(null); // Reset selected driver
+    setSelectedDriver(null);
     setForm({
       name: "",
       phoneNumber: "",
       subscriptionStatus: "inactive",
       nextSubscriptionDate: "",
-    }); // Reset form state
-    setShowModal(true); // Show the modal
+    });
+    setShowModal(true);
   };
 
   const handleDeleteDriver = () => {
@@ -153,6 +154,30 @@ function DriverTable() {
     });
   };
 
+  // QR Code logic
+  useEffect(() => {
+    let interval;
+    if (showQr) {
+      setQrLoading(true);
+      fetch(`${API_URL}/whatsapp-qr`)
+        .then((res) => res.json())
+        .then((data) => {
+          setQrImageUrl(data.qrImageUrl || null);
+          setQrLoading(false);
+        })
+        .catch(() => setQrLoading(false));
+
+      // Poll every 10s to refresh QR code
+      interval = setInterval(() => {
+        fetch(`${API_URL}/whatsapp-qr`)
+          .then((res) => res.json())
+          .then((data) => setQrImageUrl(data.qrImageUrl || null));
+      }, 10000);
+    }
+    return () => clearInterval(interval);
+    // eslint-disable-next-line
+  }, [showQr]);
+
   return (
     <div className="min-h-screen bg-yellow-50">
       <Navbar
@@ -167,6 +192,12 @@ function DriverTable() {
             className="px-5 sm:px-7 py-2 rounded-md bg-black text-yellow-400 font-semibold text-base shadow hover:bg-gray-900 transition"
           >
             + Add New Driver
+          </button>
+          <button
+            onClick={() => setShowQr(true)}
+            className="px-5 py-2 bg-green-600 text-white rounded font-semibold shadow hover:bg-green-700 transition"
+          >
+            Link WhatsApp
           </button>
         </div>
         {loading && <div className="text-black mb-2">Loading...</div>}
@@ -186,7 +217,7 @@ function DriverTable() {
               <AiOutlineClose
                 className="absolute top-3 right-3 text-black cursor-pointer"
                 size={24}
-                onClick={() => setShowModal(false)} // Close modal on click
+                onClick={() => setShowModal(false)}
               />
               <h3 className="text-lg sm:text-xl font-bold mb-4">
                 {selectedDriver ? "Update Driver" : "Add New Driver"}
@@ -269,6 +300,34 @@ function DriverTable() {
                 </button>
               </div>
             </form>
+          </div>
+        )}
+
+        {/* WhatsApp QR Modal */}
+        {showQr && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="bg-white rounded p-6 min-w-[300px] relative">
+              <button
+                className="absolute top-2 right-2 text-gray-700"
+                onClick={() => setShowQr(false)}
+              >
+                Close
+              </button>
+              <h2 className="text-lg font-semibold mb-4">
+                Scan WhatsApp QR Code
+              </h2>
+              {qrLoading ? (
+                <div>Loading QR code...</div>
+              ) : qrImageUrl ? (
+                <img src={qrImageUrl} alt="WhatsApp QR" className="mx-auto" />
+              ) : (
+                <div>No QR code available.</div>
+              )}
+              <div className="mt-4 text-xs text-gray-600">
+                Open WhatsApp on your phone, go to Menu &gt; Linked Devices and
+                scan this QR code.
+              </div>
+            </div>
           </div>
         )}
 
