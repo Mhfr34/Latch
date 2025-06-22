@@ -13,6 +13,9 @@ const driverModel = require("./models/driverModel");
 
 const app = express();
 
+// Store QR globally for API access
+global.lastQr = null;
+
 // Middleware to parse JSON requests
 app.use(express.json({ limit: "50mb" }));
 
@@ -46,7 +49,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// Use your main API router under "/api"
+// Main API router under "/api"
 app.use("/api", router);
 
 const PORT = process.env.PORT || 8080;
@@ -68,7 +71,7 @@ const startServerAndWhatsApp = async () => {
   const client = new Client({
     authStrategy: new RemoteAuth({
       store: store,
-      backupSyncIntervalMs: 300000, // optional: sync every 5 min
+      backupSyncIntervalMs: 300000, // sync every 5 min
     }),
     puppeteer: {
       headless: true,
@@ -78,6 +81,7 @@ const startServerAndWhatsApp = async () => {
 
   // QR code generation
   client.on("qr", (qr) => {
+    global.lastQr = qr;
     qrcode.generate(qr, { small: true });
   });
 
@@ -85,8 +89,6 @@ const startServerAndWhatsApp = async () => {
   const checkAndSendReminders = async () => {
     try {
       console.log("Checking for upcoming subscriptions...");
-
-      // Retrieve all drivers from database
       const allDrivers = await driverModel.find({}).sort({ createdAt: -1 });
 
       if (!allDrivers || allDrivers.length === 0) {
@@ -101,11 +103,9 @@ const startServerAndWhatsApp = async () => {
       for (let i = 0; i < allDrivers.length; i += BATCH_SIZE) {
         const batch = allDrivers.slice(i, i + BATCH_SIZE);
 
-        // Process batch in parallel
         await Promise.all(
           batch.map(async (driver) => {
             try {
-              // Check subscription status and next subscription date before sending
               if (
                 driver.subscriptionStatus &&
                 driver.subscriptionStatus.toLowerCase() === "active" &&
@@ -118,7 +118,6 @@ const startServerAndWhatsApp = async () => {
                   currentTime.getTime() + 2.5 * 60 * 60 * 1000
                 );
 
-                // Check if the next subscription date is within the next 2.5 hours
                 if (
                   nextSubscriptionDate <= twoAndHalfHoursFromNow &&
                   nextSubscriptionDate > currentTime
@@ -140,7 +139,6 @@ const startServerAndWhatsApp = async () => {
                   updatedNextSubscription.setMonth(
                     updatedNextSubscription.getMonth() + 1
                   );
-                  // If original was on 31st and next month has less days, setDate auto-adjusts
                   await driverModel.updateOne(
                     { _id: driver._id },
                     { $set: { nextSubscriptionDate: updatedNextSubscription } }
@@ -164,7 +162,6 @@ const startServerAndWhatsApp = async () => {
           })
         );
 
-        // Wait before next batch
         if (i + BATCH_SIZE < allDrivers.length) {
           await new Promise((resolve) => setTimeout(resolve, DELAY_MS));
         }
@@ -174,33 +171,26 @@ const startServerAndWhatsApp = async () => {
     }
   };
 
-  // Client ready event
   client.on("ready", async () => {
     console.log("WhatsApp client is ready!");
-
-    // Initial check
     await checkAndSendReminders();
 
-    // Set up continuous checking every hour (adjust as needed)
+    // Set up continuous checking every hour
     const CHECK_INTERVAL = 60 * 60 * 1000;
     setInterval(checkAndSendReminders, CHECK_INTERVAL);
     console.log(`Started continuous checking every hour`);
   });
 
-  // Error handling
   client.on("disconnected", (reason) => {
     console.log("WhatsApp client was logged out:", reason);
   });
 
-  // Authentication failure
   client.on("auth_failure", (msg) => {
     console.error("WhatsApp authentication failure:", msg);
   });
 
-  // Initialize WhatsApp client
   client.initialize();
 
-  // Handle process termination
   process.on("SIGINT", () => {
     console.log("Shutting down...");
     client.destroy();
