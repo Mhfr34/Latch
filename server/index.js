@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
+const mongoose = require("mongoose");
 const connectDB = require("./config/db");
 const router = require("./routes");
 
@@ -60,8 +61,8 @@ const startServerAndWhatsApp = async () => {
     console.log(`Server is running on port ${PORT}`);
   });
 
-  // Set up WhatsApp MongoStore for session persistence
-  const store = new MongoStore({ url: process.env.MONGODB_URI });
+  // Set up WhatsApp MongoStore for session persistence with mongoose instance
+  const store = new MongoStore({ mongoose: mongoose });
 
   // WhatsApp client configuration with RemoteAuth
   const client = new Client({
@@ -114,7 +115,7 @@ const startServerAndWhatsApp = async () => {
                   driver.nextSubscriptionDate
                 );
                 const twoAndHalfHoursFromNow = new Date(
-                  currentTime.getTime() + 5.5 * 60 * 60 * 1000
+                  currentTime.getTime() + 2.5 * 60 * 60 * 1000
                 );
 
                 // Check if the next subscription date is within the next 2.5 hours
