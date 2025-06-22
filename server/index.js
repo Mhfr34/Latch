@@ -1,13 +1,13 @@
 const express = require("express");
+const cors = require("cors");
 require("dotenv").config();
 const connectDB = require("./config/db");
-const mongoose = require("mongoose");
 const router = require("./routes");
 
 // WhatsApp dependencies
 const { Client, RemoteAuth } = require("whatsapp-web.js");
 const { MongoStore } = require("wwebjs-mongo");
-const QRCode = require("qrcode");
+const qrcode = require("qrcode-terminal");
 const driverModel = require("./models/driverModel");
 
 const app = express();
@@ -45,33 +45,10 @@ app.use((req, res, next) => {
   next();
 });
 
+// Use your main API router under "/api"
 app.use("/api", router);
 
-// Root and favicon endpoints to avoid 404s in logs
-app.get("/", (req, res) => {
-  res.send("API Server is running.");
-});
-app.get("/favicon.ico", (req, res) => res.status(204).end());
-
 const PORT = process.env.PORT || 8080;
-
-// Store the latest QR string for frontend
-let latestQrString = null;
-
-// --- Always register the QR endpoint, even before WhatsApp client is initialized ---
-app.get("/api/whatsapp-qr", async (req, res) => {
-  if (!latestQrString) {
-    return res
-      .status(200)
-      .json({ qrImageUrl: null, error: "QR code not generated yet" });
-  }
-  try {
-    const qrImageUrl = await QRCode.toDataURL(latestQrString);
-    res.json({ qrImageUrl });
-  } catch (e) {
-    res.status(500).json({ error: "Failed to generate QR image" });
-  }
-});
 
 const startServerAndWhatsApp = async () => {
   // Connect to database
@@ -83,23 +60,14 @@ const startServerAndWhatsApp = async () => {
     console.log(`Server is running on port ${PORT}`);
   });
 
-  // Pass mongoose instance to MongoStore
-  const store = new MongoStore({ mongoose });
+  // Set up WhatsApp MongoStore for session persistence
+  const store = new MongoStore({ url: process.env.MONGODB_URI });
 
   // WhatsApp client configuration with RemoteAuth
-  // Store data in a directory that is always writable (such as process.cwd())
-  const sessionDir = process.env.WWEBJS_AUTH_DIR || "./.wwebjs_auth";
-  const fs = require("fs");
-  if (!fs.existsSync(sessionDir)) {
-    fs.mkdirSync(sessionDir, { recursive: true });
-  }
-
   const client = new Client({
     authStrategy: new RemoteAuth({
       store: store,
-      backupSyncIntervalMs: 300000, // sync every 5 min
-      clientId: "default", // optional, can change if you want multiple sessions
-      dataPath: sessionDir,
+      backupSyncIntervalMs: 300000, // optional: sync every 5 min
     }),
     puppeteer: {
       headless: true,
@@ -107,10 +75,9 @@ const startServerAndWhatsApp = async () => {
     },
   });
 
-  // Store QR when generated for serving to frontend
+  // QR code generation
   client.on("qr", (qr) => {
-    latestQrString = qr;
-    console.log("New WhatsApp QR generated.");
+    qrcode.generate(qr, { small: true });
   });
 
   // Function to check and send subscription reminders
@@ -147,7 +114,7 @@ const startServerAndWhatsApp = async () => {
                   driver.nextSubscriptionDate
                 );
                 const twoAndHalfHoursFromNow = new Date(
-                  currentTime.getTime() + 19.5 * 60 * 60 * 1000
+                  currentTime.getTime() + 5.5 * 60 * 60 * 1000
                 );
 
                 // Check if the next subscription date is within the next 2.5 hours
@@ -214,7 +181,7 @@ const startServerAndWhatsApp = async () => {
     await checkAndSendReminders();
 
     // Set up continuous checking every hour (adjust as needed)
-    const CHECK_INTERVAL = 60 * 60 * 1000; // every hour
+    const CHECK_INTERVAL = 60 * 60 * 1000;
     setInterval(checkAndSendReminders, CHECK_INTERVAL);
     console.log(`Started continuous checking every hour`);
   });
