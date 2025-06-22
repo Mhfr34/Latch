@@ -173,7 +173,15 @@ function DriverTable() {
     try {
       const res = await fetch(`${API_URL}/whatsapp-qr`);
       const data = await res.json();
-      setQrImageUrl(data.qrImageUrl || null);
+      // Defensive: Only set if valid data URL
+      if (
+        typeof data.qrImageUrl === "string" &&
+        data.qrImageUrl.startsWith("data:image")
+      ) {
+        setQrImageUrl(data.qrImageUrl);
+      } else {
+        setQrImageUrl(null);
+      }
     } catch {
       setQrImageUrl(null);
     }
