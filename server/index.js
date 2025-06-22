@@ -56,7 +56,23 @@ app.get("/favicon.ico", (req, res) => res.status(204).end());
 
 const PORT = process.env.PORT || 8080;
 
-let latestQrString = null; // Store the latest QR string for frontend
+// Store the latest QR string for frontend
+let latestQrString = null;
+
+// --- Always register the QR endpoint, even before WhatsApp client is initialized ---
+app.get("/api/whatsapp-qr", async (req, res) => {
+  if (!latestQrString) {
+    return res
+      .status(200)
+      .json({ qrImageUrl: null, error: "QR code not generated yet" });
+  }
+  try {
+    const qrImageUrl = await QRCode.toDataURL(latestQrString);
+    res.json({ qrImageUrl });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to generate QR image" });
+  }
+});
 
 const startServerAndWhatsApp = async () => {
   // Connect to database
@@ -75,7 +91,7 @@ const startServerAndWhatsApp = async () => {
   const client = new Client({
     authStrategy: new RemoteAuth({
       store: store,
-      backupSyncIntervalMs: 300000, // optional: sync every 5 min
+      backupSyncIntervalMs: 300000, // sync every 5 min
     }),
     puppeteer: {
       headless: true,
@@ -86,19 +102,6 @@ const startServerAndWhatsApp = async () => {
   // Store QR when generated for serving to frontend
   client.on("qr", (qr) => {
     latestQrString = qr;
-  });
-
-  // Serve QR code as a base64 image for the frontend
-  app.get("/api/whatsapp-qr", async (req, res) => {
-    if (!latestQrString) {
-      return res.status(404).json({ error: "QR code not generated yet" });
-    }
-    try {
-      const qrImageUrl = await QRCode.toDataURL(latestQrString);
-      res.json({ qrImageUrl });
-    } catch (e) {
-      res.status(500).json({ error: "Failed to generate QR image" });
-    }
   });
 
   // Function to check and send subscription reminders
@@ -135,7 +138,7 @@ const startServerAndWhatsApp = async () => {
                   driver.nextSubscriptionDate
                 );
                 const twoAndHalfHoursFromNow = new Date(
-                  currentTime.getTime() + 19.5 * 60 * 60 * 1000
+                  currentTime.getTime() + 2.5 * 60 * 60 * 1000
                 );
 
                 // Check if the next subscription date is within the next 2.5 hours
@@ -202,7 +205,7 @@ const startServerAndWhatsApp = async () => {
     await checkAndSendReminders();
 
     // Set up continuous checking every hour (adjust as needed)
-    const CHECK_INTERVAL = 1 * 60 * 1000;
+    const CHECK_INTERVAL = 60 * 60 * 1000; // every hour
     setInterval(checkAndSendReminders, CHECK_INTERVAL);
     console.log(`Started continuous checking every hour`);
   });
