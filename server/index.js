@@ -2,10 +2,12 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const connectDB = require("./config/db");
+const mongoose = require("mongoose"); // Import mongoose instance
 const router = require("./routes");
 
 // WhatsApp dependencies
-const { Client, LocalAuth } = require("whatsapp-web.js");
+const { Client, RemoteAuth } = require("whatsapp-web.js");
+const { MongoStore } = require("wwebjs-mongo");
 const qrcode = require("qrcode-terminal");
 const driverModel = require("./models/driverModel");
 
@@ -59,9 +61,15 @@ const startServerAndWhatsApp = async () => {
     console.log(`Server is running on port ${PORT}`);
   });
 
-  // WhatsApp client configuration
+  // Fix: Pass mongoose instance to MongoStore
+  const store = new MongoStore({ mongoose }); // Pass mongoose instance
+
+  // WhatsApp client configuration with RemoteAuth
   const client = new Client({
-    authStrategy: new LocalAuth(),
+    authStrategy: new RemoteAuth({
+      store: store,
+      backupSyncIntervalMs: 300000, // optional: sync every 5 min
+    }),
     puppeteer: {
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
@@ -173,10 +181,10 @@ const startServerAndWhatsApp = async () => {
     // Initial check
     await checkAndSendReminders();
 
-    // Set up continuous checking every 5 minutes (300,000 milliseconds)
+    // Set up continuous checking every hour (adjust as needed)
     const CHECK_INTERVAL = 60 * 60 * 1000;
     setInterval(checkAndSendReminders, CHECK_INTERVAL);
-    console.log(`Started continuous checking every 5 minutes`);
+    console.log(`Started continuous checking every hour`);
   });
 
   // Error handling
