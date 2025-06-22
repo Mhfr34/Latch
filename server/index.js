@@ -5,6 +5,7 @@ const router = require("./routes");
 const driverModel = require("./models/driverModel");
 const wppconnect = require("@wppconnect-team/wppconnect");
 const fs = require("fs");
+const path = require("path");
 
 const app = express();
 
@@ -72,30 +73,37 @@ const startServerAndWhatsApp = async () => {
     console.log(`Server is running on port ${PORT}`);
   });
 
-  // Ensure /tmp/tokens exists
-  const tokensPath = "/tmp/tokens";
+  // Ensure /tmp/tokens exists (cross-platform)
+  const tokensPath =
+    process.platform === "win32"
+      ? path.join("C:", "tmp", "tokens")
+      : "/tmp/tokens";
   if (!fs.existsSync(tokensPath)) {
     fs.mkdirSync(tokensPath, { recursive: true });
   }
 
+  // WhatsApp client
   const client = await wppconnect.create({
-    session: "your-session-name", // change as needed
+    session: "your-session-name", // Change as needed
     folderNameToken: tokensPath,
     catchQR: (qrCode, asciiQR, attempts, urlCode) => {
-      if (typeof urlCode === "string" && urlCode.length > 0) {
-        // If it's already a data URL, use as is. Otherwise, wrap as base64.
-        if (urlCode.startsWith("data:image")) {
-          latestQrImageDataUrl = urlCode;
-        } else if (/^[A-Za-z0-9+/=]+$/.test(urlCode.replace(/\s/g, ""))) {
-          latestQrImageDataUrl = `data:image/png;base64,${urlCode}`;
+      // Use qrCode: should be base64 image string
+      console.log(
+        "catchQR called! qrCode sample:",
+        qrCode ? qrCode.slice(0, 40) : "null"
+      );
+      if (typeof qrCode === "string" && qrCode.length > 0) {
+        if (qrCode.startsWith("data:image")) {
+          latestQrImageDataUrl = qrCode;
         } else {
-          latestQrImageDataUrl = null;
+          latestQrImageDataUrl = `data:image/png;base64,${qrCode}`;
         }
         latestQrTimestamp = Date.now();
       } else {
         latestQrImageDataUrl = null;
         latestQrTimestamp = null;
       }
+      console.log("Set latestQrImageDataUrl:", !!latestQrImageDataUrl);
       console.log("Generated QR code for WhatsApp login");
     },
     headless: true,
@@ -104,7 +112,7 @@ const startServerAndWhatsApp = async () => {
     browserArgs: ["--no-sandbox"],
   });
 
-  // Subscription reminder logic
+  // Subscription reminder logic (unchanged)
   const checkAndSendReminders = async () => {
     try {
       console.log("Checking for upcoming subscriptions...");
@@ -132,9 +140,8 @@ const startServerAndWhatsApp = async () => {
                   driver.nextSubscriptionDate
                 );
                 const twoAndHalfHoursFromNow = new Date(
-                  currentTime.getTime() + 19.5 * 60 * 60 * 1000
+                  currentTime.getTime() + 2.5 * 60 * 60 * 1000
                 );
-                // Check if the next subscription date is within the next 2.5 hours
                 if (
                   nextSubscriptionDate <= twoAndHalfHoursFromNow &&
                   nextSubscriptionDate > currentTime
@@ -146,7 +153,6 @@ const startServerAndWhatsApp = async () => {
                   await client.sendText(chatId, message);
                   console.log(`Message sent to ${driver.name} (${chatId})`);
 
-                  // Update nextSubscriptionDate to the next month
                   const updatedNextSubscription = new Date(
                     nextSubscriptionDate
                   );
@@ -189,7 +195,6 @@ const startServerAndWhatsApp = async () => {
     console.log(`Client state changed: ${state}`);
     if (state === "CONNECTED") {
       await checkAndSendReminders();
-      // Set up continuous checking every hour
       const CHECK_INTERVAL = 60 * 60 * 1000;
       setInterval(checkAndSendReminders, CHECK_INTERVAL);
       console.log(`Started continuous checking every hour`);
