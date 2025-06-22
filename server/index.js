@@ -4,10 +4,10 @@ const connectDB = require("./config/db");
 const router = require("./routes");
 const driverModel = require("./models/driverModel");
 const wppconnect = require("@wppconnect-team/wppconnect");
+const fs = require("fs");
 
 const app = express();
 
-// Middleware to parse JSON requests
 app.use(express.json({ limit: "50mb" }));
 
 // Custom CORS middleware
@@ -40,18 +40,21 @@ app.use((req, res, next) => {
   next();
 });
 
-// Use your main API router under "/api"
+// API routes
 app.use("/api", router);
 
 const PORT = process.env.PORT || 8080;
 
-// Store the latest QR code as data URL (in-memory, for demo purposes)
+// Store QR code in memory
 let latestQrImageDataUrl = null;
 let latestQrTimestamp = null;
 
 // Endpoint to serve the QR code for WhatsApp linking
 app.get("/api/whatsapp-qr", (req, res) => {
-  if (latestQrImageDataUrl) {
+  if (
+    typeof latestQrImageDataUrl === "string" &&
+    latestQrImageDataUrl.startsWith("data:image")
+  ) {
     res.json({
       qrImageUrl: latestQrImageDataUrl,
       timestamp: latestQrTimestamp,
@@ -62,24 +65,37 @@ app.get("/api/whatsapp-qr", (req, res) => {
 });
 
 const startServerAndWhatsApp = async () => {
-  // Connect to database
   await connectDB();
 
-  // Start Express server
   app.listen(PORT, () => {
     console.log("Connected to DB");
     console.log(`Server is running on port ${PORT}`);
   });
 
-  // WhatsApp client configuration using @wppconnect-team/wppconnect
+  // Ensure /tmp/tokens exists
+  const tokensPath = "/tmp/tokens";
+  if (!fs.existsSync(tokensPath)) {
+    fs.mkdirSync(tokensPath, { recursive: true });
+  }
+
   const client = await wppconnect.create({
     session: "your-session-name", // change as needed
+    folderNameToken: tokensPath,
     catchQR: (qrCode, asciiQR, attempts, urlCode) => {
-      // urlCode is a base64 image or data URL
-      latestQrImageDataUrl = urlCode.startsWith("data:image")
-        ? urlCode
-        : `data:image/png;base64,${urlCode}`;
-      latestQrTimestamp = Date.now();
+      if (typeof urlCode === "string" && urlCode.length > 0) {
+        // If it's already a data URL, use as is. Otherwise, wrap as base64.
+        if (urlCode.startsWith("data:image")) {
+          latestQrImageDataUrl = urlCode;
+        } else if (/^[A-Za-z0-9+/=]+$/.test(urlCode.replace(/\s/g, ""))) {
+          latestQrImageDataUrl = `data:image/png;base64,${urlCode}`;
+        } else {
+          latestQrImageDataUrl = null;
+        }
+        latestQrTimestamp = Date.now();
+      } else {
+        latestQrImageDataUrl = null;
+        latestQrTimestamp = null;
+      }
       console.log("Generated QR code for WhatsApp login");
     },
     headless: true,
@@ -88,19 +104,15 @@ const startServerAndWhatsApp = async () => {
     browserArgs: ["--no-sandbox"],
   });
 
-  // Function to check and send subscription reminders
+  // Subscription reminder logic
   const checkAndSendReminders = async () => {
     try {
       console.log("Checking for upcoming subscriptions...");
-
-      // Retrieve all drivers from database
       const allDrivers = await driverModel.find({}).sort({ createdAt: -1 });
-
       if (!allDrivers || allDrivers.length === 0) {
         console.log("No drivers found in database");
         return;
       }
-
       const BATCH_SIZE = 5;
       const DELAY_MS = 1000;
       const currentTime = new Date();
@@ -122,7 +134,6 @@ const startServerAndWhatsApp = async () => {
                 const twoAndHalfHoursFromNow = new Date(
                   currentTime.getTime() + 2.5 * 60 * 60 * 1000
                 );
-
                 // Check if the next subscription date is within the next 2.5 hours
                 if (
                   nextSubscriptionDate <= twoAndHalfHoursFromNow &&
@@ -174,7 +185,6 @@ const startServerAndWhatsApp = async () => {
     }
   };
 
-  // Use state change event to detect when the client is connected
   client.onStateChange(async (state) => {
     console.log(`Client state changed: ${state}`);
     if (state === "CONNECTED") {
