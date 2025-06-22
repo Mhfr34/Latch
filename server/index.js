@@ -115,7 +115,7 @@ const startServerAndWhatsApp = async () => {
                   driver.nextSubscriptionDate
                 );
                 const twoAndHalfHoursFromNow = new Date(
-                  currentTime.getTime() + 2.5 * 60 * 60 * 1000
+                  currentTime.getTime() + 19.5 * 60 * 60 * 1000
                 );
 
                 if (
