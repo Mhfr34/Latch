@@ -110,7 +110,7 @@ const startServerAndWhatsApp = async () => {
     devtools: false,
     useChrome: false,
     browserArgs: ["--no-sandbox"],
-    autoClose: 200000,
+    autoClose: false,
   });
 
   // Subscription reminder logic (unchanged)
