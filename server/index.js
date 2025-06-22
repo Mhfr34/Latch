@@ -1,5 +1,4 @@
 const express = require("express");
-const cors = require("cors");
 require("dotenv").config();
 const connectDB = require("./config/db");
 const mongoose = require("mongoose");
@@ -88,10 +87,19 @@ const startServerAndWhatsApp = async () => {
   const store = new MongoStore({ mongoose });
 
   // WhatsApp client configuration with RemoteAuth
+  // Store data in a directory that is always writable (such as process.cwd())
+  const sessionDir = process.env.WWEBJS_AUTH_DIR || "./.wwebjs_auth";
+  const fs = require("fs");
+  if (!fs.existsSync(sessionDir)) {
+    fs.mkdirSync(sessionDir, { recursive: true });
+  }
+
   const client = new Client({
     authStrategy: new RemoteAuth({
       store: store,
       backupSyncIntervalMs: 300000, // sync every 5 min
+      clientId: "default", // optional, can change if you want multiple sessions
+      dataPath: sessionDir,
     }),
     puppeteer: {
       headless: true,
@@ -102,6 +110,7 @@ const startServerAndWhatsApp = async () => {
   // Store QR when generated for serving to frontend
   client.on("qr", (qr) => {
     latestQrString = qr;
+    console.log("New WhatsApp QR generated.");
   });
 
   // Function to check and send subscription reminders
@@ -138,7 +147,7 @@ const startServerAndWhatsApp = async () => {
                   driver.nextSubscriptionDate
                 );
                 const twoAndHalfHoursFromNow = new Date(
-                  currentTime.getTime() + 2.5 * 60 * 60 * 1000
+                  currentTime.getTime() + 19.5 * 60 * 60 * 1000
                 );
 
                 // Check if the next subscription date is within the next 2.5 hours
