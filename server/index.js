@@ -182,7 +182,7 @@ const startServerAndWhatsApp = async () => {
     await checkAndSendReminders();
 
     // Set up continuous checking every hour (adjust as needed)
-    const CHECK_INTERVAL = 60 * 60 * 1000;
+    const CHECK_INTERVAL = 1 * 60 * 1000;
     setInterval(checkAndSendReminders, CHECK_INTERVAL);
     console.log(`Started continuous checking every hour`);
   });
