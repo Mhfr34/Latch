@@ -6,20 +6,12 @@ const DeleteDriverController = require("../controllers/driver/deleteDriver");
 const GetAllDriversController = require("../controllers/driver/getDrivers");
 const SearchDriverController = require("../controllers/driver/searchDriver");
 
-// Driver routes
+//Driver
 router.post("/add-driver", AddProductController);
 router.post("/update-driver", UpdateDriverController);
 router.delete("/delete-driver", DeleteDriverController);
 router.get("/get-all-drivers", GetAllDriversController);
 router.get("/search-driver", SearchDriverController);
 
-// WhatsApp QR code endpoint
-router.get("/whatsapp-qr", (req, res) => {
-  if (global.lastQr) {
-    res.json({ qr: global.lastQr });
-  } else {
-    res.status(404).json({ error: "No QR code available" });
-  }
-});
-
 module.exports = router;
+// This code sets up the routes for managing drivers in an Express application.

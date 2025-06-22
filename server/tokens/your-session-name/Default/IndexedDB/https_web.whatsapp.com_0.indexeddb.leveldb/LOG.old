@@ -1,0 +1,45 @@
+2025/06/22-12:04:23.278 33a4 Reusing MANIFEST C:\Users\USER\Desktop\Latch\server\tokens\your-session-name\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2025/06/22-12:04:23.278 33a4 Recovering log #219
+2025/06/22-12:04:23.352 33a4 Reusing old log C:\Users\USER\Desktop\Latch\server\tokens\your-session-name\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/000219.log 
+2025/06/22-12:04:23.352 33a4 Delete type=2 #209
+2025/06/22-12:04:23.352 33a4 Delete type=2 #210
+2025/06/22-12:04:23.352 33a4 Delete type=2 #211
+2025/06/22-12:04:23.352 33a4 Delete type=2 #221
+2025/06/22-12:04:25.284 33a4 Level-0 table #231: started
+2025/06/22-12:04:25.382 33a4 Level-0 table #231: 358174 bytes OK
+2025/06/22-12:04:25.386 33a4 Delete type=0 #219
+2025/06/22-12:04:25.387 33a4 Manual compaction at level-0 from '\x002\x00\x00\x00' @ 72057594037927935 : 1 .. '\x003\x00\x00\x00' @ 0 : 0; will stop at '\x003\x00\x00\x05' @ 599389 : 1
+2025/06/22-12:04:25.387 33a4 Compacting 1@0 + 3@1 files
+2025/06/22-12:04:25.691 33a4 Generated table #232@0: 17256 keys, 2196880 bytes
+2025/06/22-12:04:26.125 33a4 Generated table #233@0: 35781 keys, 2264325 bytes
+2025/06/22-12:04:26.221 33a4 Generated table #234@0: 8770 keys, 988135 bytes
+2025/06/22-12:04:26.221 33a4 Compacted 1@0 + 3@1 files => 5449340 bytes
+2025/06/22-12:04:26.222 33a4 compacted to: files[ 0 3 4 0 0 0 0 ]
+2025/06/22-12:04:26.222 33a4 Delete type=2 #231
+2025/06/22-12:04:26.223 33a4 Manual compaction at level-0 from '\x003\x00\x00\x05' @ 599389 : 1 .. '\x003\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/06/22-12:04:26.230 33a4 Level-0 table #236: started
+2025/06/22-12:04:26.234 33a4 Level-0 table #236: 4461 bytes OK
+2025/06/22-12:04:26.235 33a4 Delete type=2 #222
+2025/06/22-12:04:26.236 33a4 Delete type=2 #223
+2025/06/22-12:04:26.236 33a4 Delete type=2 #224
+2025/06/22-12:04:26.236 33a4 Delete type=0 #230
+2025/06/22-12:04:26.248 33a4 Manual compaction at level-0 from '\x003\x00\x00\x00' @ 72057594037927935 : 1 .. '\x004\x00\x00\x00' @ 0 : 0; will stop at '\x003\x00\x00\x05' @ 600985 : 0
+2025/06/22-12:04:26.248 33a4 Compacting 1@0 + 3@1 files
+2025/06/22-12:04:26.464 33a4 Generated table #237@0: 17484 keys, 2198181 bytes
+2025/06/22-12:04:26.782 33a4 Generated table #238@0: 35834 keys, 2264618 bytes
+2025/06/22-12:04:26.880 33a4 Generated table #239@0: 8487 keys, 965370 bytes
+2025/06/22-12:04:26.880 33a4 Compacted 1@0 + 3@1 files => 5428169 bytes
+2025/06/22-12:04:26.881 33a4 compacted to: files[ 0 3 4 0 0 0 0 ]
+2025/06/22-12:04:26.881 33a4 Delete type=2 #236
+2025/06/22-12:04:26.882 33a4 Manual compaction at level-0 from '\x003\x00\x00\x05' @ 600985 : 0 .. '\x004\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/06/22-12:04:31.198 33a4 Compacting 1@1 + 4@2 files
+2025/06/22-12:04:31.688 33a4 Generated table #240@1: 47672 keys, 2206363 bytes
+2025/06/22-12:04:31.800 33a4 Generated table #241@1: 4314 keys, 2139636 bytes
+2025/06/22-12:04:31.834 33a4 Generated table #242@1: 282 keys, 2119096 bytes
+2025/06/22-12:04:31.912 33a4 Generated table #243@1: 1187 keys, 2138952 bytes
+2025/06/22-12:04:32.078 33a4 Generated table #244@1: 10365 keys, 1614731 bytes
+2025/06/22-12:04:32.078 33a4 Compacted 1@1 + 4@2 files => 10218778 bytes
+2025/06/22-12:04:32.080 33a4 compacted to: files[ 0 2 5 0 0 0 0 ]
+2025/06/22-12:04:32.081 33a4 Delete type=2 #232
+2025/06/22-12:04:32.081 33a4 Delete type=2 #233
+2025/06/22-12:04:32.081 33a4 Delete type=2 #234

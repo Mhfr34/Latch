@@ -1,20 +1,11 @@
 const express = require("express");
-const cors = require("cors");
 require("dotenv").config();
-const mongoose = require("mongoose");
 const connectDB = require("./config/db");
 const router = require("./routes");
-
-// WhatsApp dependencies
-const { Client, RemoteAuth } = require("whatsapp-web.js");
-const { MongoStore } = require("wwebjs-mongo");
-const qrcode = require("qrcode-terminal");
 const driverModel = require("./models/driverModel");
+const wppconnect = require("@wppconnect-team/wppconnect");
 
 const app = express();
-
-// Store QR globally for API access
-global.lastQr = null;
 
 // Middleware to parse JSON requests
 app.use(express.json({ limit: "50mb" }));
@@ -49,10 +40,26 @@ app.use((req, res, next) => {
   next();
 });
 
-// Main API router under "/api"
+// Use your main API router under "/api"
 app.use("/api", router);
 
 const PORT = process.env.PORT || 8080;
+
+// Store the latest QR code as data URL (in-memory, for demo purposes)
+let latestQrImageDataUrl = null;
+let latestQrTimestamp = null;
+
+// Endpoint to serve the QR code for WhatsApp linking
+app.get("/api/whatsapp-qr", (req, res) => {
+  if (latestQrImageDataUrl) {
+    res.json({
+      qrImageUrl: latestQrImageDataUrl,
+      timestamp: latestQrTimestamp,
+    });
+  } else {
+    res.status(404).json({ qrImageUrl: null, message: "QR not available" });
+  }
+});
 
 const startServerAndWhatsApp = async () => {
   // Connect to database
@@ -64,31 +71,29 @@ const startServerAndWhatsApp = async () => {
     console.log(`Server is running on port ${PORT}`);
   });
 
-  // Set up WhatsApp MongoStore for session persistence with mongoose instance
-  const store = new MongoStore({ mongoose: mongoose });
-
-  // WhatsApp client configuration with RemoteAuth
-  const client = new Client({
-    authStrategy: new RemoteAuth({
-      store: store,
-      backupSyncIntervalMs: 300000, // sync every 5 min
-    }),
-    puppeteer: {
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  // WhatsApp client configuration using @wppconnect-team/wppconnect
+  const client = await wppconnect.create({
+    session: "your-session-name", // change as needed
+    catchQR: (qrCode, asciiQR, attempts, urlCode) => {
+      // urlCode is a base64 image or data URL
+      latestQrImageDataUrl = urlCode.startsWith("data:image")
+        ? urlCode
+        : `data:image/png;base64,${urlCode}`;
+      latestQrTimestamp = Date.now();
+      console.log("Generated QR code for WhatsApp login");
     },
-  });
-
-  // QR code generation
-  client.on("qr", (qr) => {
-    global.lastQr = qr;
-    qrcode.generate(qr, { small: true });
+    headless: true,
+    devtools: false,
+    useChrome: false,
+    browserArgs: ["--no-sandbox"],
   });
 
   // Function to check and send subscription reminders
   const checkAndSendReminders = async () => {
     try {
       console.log("Checking for upcoming subscriptions...");
+
+      // Retrieve all drivers from database
       const allDrivers = await driverModel.find({}).sort({ createdAt: -1 });
 
       if (!allDrivers || allDrivers.length === 0) {
@@ -96,8 +101,8 @@ const startServerAndWhatsApp = async () => {
         return;
       }
 
-      const BATCH_SIZE = 5; // Number of parallel messages
-      const DELAY_MS = 1000; // Delay between batches
+      const BATCH_SIZE = 5;
+      const DELAY_MS = 1000;
       const currentTime = new Date();
 
       for (let i = 0; i < allDrivers.length; i += BATCH_SIZE) {
@@ -115,9 +120,10 @@ const startServerAndWhatsApp = async () => {
                   driver.nextSubscriptionDate
                 );
                 const twoAndHalfHoursFromNow = new Date(
-                  currentTime.getTime() + 19.5 * 60 * 60 * 1000
+                  currentTime.getTime() + 2.5 * 60 * 60 * 1000
                 );
 
+                // Check if the next subscription date is within the next 2.5 hours
                 if (
                   nextSubscriptionDate <= twoAndHalfHoursFromNow &&
                   nextSubscriptionDate > currentTime
@@ -126,11 +132,8 @@ const startServerAndWhatsApp = async () => {
                   const chatId = `961${phone}@c.us`;
                   const message = `Dear ${driver.name}, please don't forget to pay your subscription fee. Thank you!`;
 
-                  const response = await client.sendMessage(chatId, message);
-                  console.log(
-                    `Message sent to ${driver.name} (${chatId}):`,
-                    response.id.id
-                  );
+                  await client.sendText(chatId, message);
+                  console.log(`Message sent to ${driver.name} (${chatId})`);
 
                   // Update nextSubscriptionDate to the next month
                   const updatedNextSubscription = new Date(
@@ -171,29 +174,36 @@ const startServerAndWhatsApp = async () => {
     }
   };
 
-  client.on("ready", async () => {
-    console.log("WhatsApp client is ready!");
-    await checkAndSendReminders();
-
-    // Set up continuous checking every hour
-    const CHECK_INTERVAL = 60 * 60 * 1000;
-    setInterval(checkAndSendReminders, CHECK_INTERVAL);
-    console.log(`Started continuous checking every hour`);
+  // Use state change event to detect when the client is connected
+  client.onStateChange(async (state) => {
+    console.log(`Client state changed: ${state}`);
+    if (state === "CONNECTED") {
+      await checkAndSendReminders();
+      // Set up continuous checking every hour
+      const CHECK_INTERVAL = 60 * 60 * 1000;
+      setInterval(checkAndSendReminders, CHECK_INTERVAL);
+      console.log(`Started continuous checking every hour`);
+    }
+    if (state === "CONFLICT" || state === "UNLAUNCHED") client.useHere();
   });
 
-  client.on("disconnected", (reason) => {
-    console.log("WhatsApp client was logged out:", reason);
+  client.onStreamChange((state) => {
+    if (state === "DISCONNECTED" || state === "SYNCING") {
+      console.log("Stream state:", state);
+    }
+  });
+
+  client.onLogout(() => {
+    console.log("WhatsApp client was logged out");
   });
 
   client.on("auth_failure", (msg) => {
     console.error("WhatsApp authentication failure:", msg);
   });
 
-  client.initialize();
-
-  process.on("SIGINT", () => {
+  process.on("SIGINT", async () => {
     console.log("Shutting down...");
-    client.destroy();
+    await client.close();
     process.exit();
   });
 };

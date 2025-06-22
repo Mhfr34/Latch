@@ -1,0 +1,2 @@
+[0622/120956.275:INFO:CONSOLE(0)] "[object PromiseRejectionEvent]", source:  (0)
+[0622/120956.276:INFO:CONSOLE(150)] "Uncaught (in promise) NotInitializedError", source: https://static.whatsapp.net/rsrc.php/v4/y7/r/MJ9ScsSSMFm.js (150)

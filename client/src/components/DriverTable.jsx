@@ -159,24 +159,26 @@ function DriverTable() {
     let interval;
     if (showQr) {
       setQrLoading(true);
-      fetch(`${API_URL}/whatsapp-qr`)
-        .then((res) => res.json())
-        .then((data) => {
-          setQrImageUrl(data.qrImageUrl || null);
-          setQrLoading(false);
-        })
-        .catch(() => setQrLoading(false));
+      fetchQr();
 
       // Poll every 10s to refresh QR code
-      interval = setInterval(() => {
-        fetch(`${API_URL}/whatsapp-qr`)
-          .then((res) => res.json())
-          .then((data) => setQrImageUrl(data.qrImageUrl || null));
-      }, 10000);
+      interval = setInterval(fetchQr, 10000);
     }
     return () => clearInterval(interval);
     // eslint-disable-next-line
   }, [showQr]);
+
+  const fetchQr = async () => {
+    setQrLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/whatsapp-qr`);
+      const data = await res.json();
+      setQrImageUrl(data.qrImageUrl || null);
+    } catch {
+      setQrImageUrl(null);
+    }
+    setQrLoading(false);
+  };
 
   return (
     <div className="min-h-screen bg-yellow-50">
