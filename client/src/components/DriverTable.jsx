@@ -13,10 +13,6 @@ function DriverTable() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [showQr, setShowQr] = useState(false);
-  const [qrImageUrl, setQrImageUrl] = useState(null);
-  const [qrLoading, setQrLoading] = useState(false);
-  const [formLoading, setFormLoading] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState(null);
   const [form, setForm] = useState({
     name: "",
@@ -25,6 +21,7 @@ function DriverTable() {
     nextSubscriptionDate: "",
   });
   const [formError, setFormError] = useState(null);
+  const [formLoading, setFormLoading] = useState(false);
 
   // Fetch all drivers
   const fetchDrivers = async () => {
@@ -154,40 +151,6 @@ function DriverTable() {
     });
   };
 
-  // QR Code logic
-  useEffect(() => {
-    let interval;
-    if (showQr) {
-      setQrLoading(true);
-      fetchQr();
-
-      // Poll every 10s to refresh QR code
-      interval = setInterval(fetchQr, 10000);
-    }
-    return () => clearInterval(interval);
-    // eslint-disable-next-line
-  }, [showQr]);
-
-  const fetchQr = async () => {
-    setQrLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/whatsapp-qr`);
-      const data = await res.json();
-      // Defensive: Only set if valid data URL
-      if (
-        typeof data.qrImageUrl === "string" &&
-        data.qrImageUrl.startsWith("data:image")
-      ) {
-        setQrImageUrl(data.qrImageUrl);
-      } else {
-        setQrImageUrl(null);
-      }
-    } catch {
-      setQrImageUrl(null);
-    }
-    setQrLoading(false);
-  };
-
   return (
     <div className="min-h-screen bg-yellow-50">
       <Navbar
@@ -202,12 +165,6 @@ function DriverTable() {
             className="px-5 sm:px-7 py-2 rounded-md bg-black text-yellow-400 font-semibold text-base shadow hover:bg-gray-900 transition"
           >
             + Add New Driver
-          </button>
-          <button
-            onClick={() => setShowQr(true)}
-            className="px-5 py-2 bg-green-600 text-white rounded font-semibold shadow hover:bg-green-700 transition"
-          >
-            Link WhatsApp
           </button>
         </div>
         {loading && <div className="text-black mb-2">Loading...</div>}
@@ -310,34 +267,6 @@ function DriverTable() {
                 </button>
               </div>
             </form>
-          </div>
-        )}
-
-        {/* WhatsApp QR Modal */}
-        {showQr && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-            <div className="bg-white rounded p-6 min-w-[300px] relative">
-              <button
-                className="absolute top-2 right-2 text-gray-700"
-                onClick={() => setShowQr(false)}
-              >
-                Close
-              </button>
-              <h2 className="text-lg font-semibold mb-4">
-                Scan WhatsApp QR Code
-              </h2>
-              {qrLoading ? (
-                <div>Loading QR code...</div>
-              ) : qrImageUrl ? (
-                <img src={qrImageUrl} alt="WhatsApp QR" className="mx-auto" />
-              ) : (
-                <div>No QR code available.</div>
-              )}
-              <div className="mt-4 text-xs text-gray-600">
-                Open WhatsApp on your phone, go to Menu &gt; Linked Devices and
-                scan this QR code.
-              </div>
-            </div>
           </div>
         )}
 
