@@ -3,6 +3,7 @@ import axios from "axios";
 import { AiOutlineClose } from "react-icons/ai";
 import { FaTrash } from "react-icons/fa";
 import Navbar from "./Navbar";
+import SpinnerLogo from "./SpinnerLogo";
 import { confirmAlert } from "react-confirm-alert";
 import "react-confirm-alert/src/react-confirm-alert.css";
 
@@ -151,8 +152,12 @@ function DriverTable() {
     });
   };
 
+  // Show spinner in center for all loading (data or form)
+  const showSpinner = loading || formLoading;
+
   return (
-    <div className="min-h-screen bg-yellow-50">
+    <div className="min-h-screen bg-yellow-50 relative">
+      {showSpinner && <SpinnerLogo />}
       <Navbar
         setDrivers={setDrivers}
         setLoading={setLoading}
@@ -163,11 +168,11 @@ function DriverTable() {
           <button
             onClick={handleAddNewDriver}
             className="px-5 sm:px-7 py-2 rounded-md bg-black text-yellow-400 font-semibold text-base shadow hover:bg-gray-900 transition"
+            disabled={showSpinner}
           >
             + Add New Driver
           </button>
         </div>
-        {loading && <div className="text-black mb-2">Loading...</div>}
         {error && <div className="text-red-600 mb-2">{error}</div>}
 
         {/* Add/Update Driver Modal/Form */}
@@ -201,6 +206,7 @@ function DriverTable() {
                     value={form.name}
                     onChange={handleChange}
                     required
+                    disabled={formLoading}
                     className="w-full px-3 py-2 mt-1 rounded-md border border-yellow-400 outline-none text-black bg-white"
                   />
                 </label>
@@ -214,6 +220,7 @@ function DriverTable() {
                     value={form.phoneNumber}
                     onChange={handleChange}
                     required
+                    disabled={formLoading}
                     className="w-full px-3 py-2 mt-1 rounded-md border border-yellow-400 outline-none text-black bg-white"
                   />
                 </label>
@@ -225,6 +232,7 @@ function DriverTable() {
                     name="subscriptionStatus"
                     value={form.subscriptionStatus}
                     onChange={handleChange}
+                    disabled={formLoading}
                     className="w-full px-3 py-2 mt-1 rounded-md border border-yellow-400 text-black bg-white"
                   >
                     <option value="inactive">Inactive</option>
@@ -240,6 +248,7 @@ function DriverTable() {
                     type="date"
                     value={form.nextSubscriptionDate}
                     onChange={handleChange}
+                    disabled={formLoading}
                     className="w-full px-3 py-2 mt-1 rounded-md border border-yellow-400 text-black bg-white"
                   />
                 </label>
@@ -250,6 +259,7 @@ function DriverTable() {
                     type="button"
                     onClick={handleDeleteDriver}
                     className="flex items-center justify-center px-6 py-2 rounded-md bg-red-600 text-white font-semibold hover:bg-red-700 transition"
+                    disabled={formLoading}
                   >
                     <FaTrash className="mr-2" /> Delete Driver
                   </button>
@@ -329,7 +339,7 @@ function DriverTable() {
               ) : (
                 <tr>
                   <td colSpan={4} className="text-center py-6 text-gray-500">
-                    {loading ? "Loading..." : "No drivers found."}
+                    No drivers found.
                   </td>
                 </tr>
               )}
